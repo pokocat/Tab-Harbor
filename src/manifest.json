@@ -1,0 +1,17 @@
+{
+  "manifest_version": 3,
+  "name": "TabHarbor",
+  "version": "0.1.0",
+  "description": "Archive, deduplicate, and recover tabs without losing context.",
+  "minimum_chrome_version": "120",
+  "permissions": ["tabs", "storage"],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_title": "TabHarbor",
+    "default_popup": "popup.html"
+  },
+  "options_page": "dashboard.html"
+}

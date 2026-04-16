@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TabHarbor Dashboard</title>
+    <link rel="stylesheet" href="dashboard.css" />
+  </head>
+  <body>
+    <main class="dashboard-shell">
+      <header class="hero">
+        <div>
+          <p class="eyebrow">TabHarbor Dashboard</p>
+          <h1>Manage sessions, duplicates, and browsing clutter</h1>
+          <p class="subtle">Built with least-privilege permissions, local-only storage, and reversible actions.</p>
+        </div>
+        <div class="hero-actions">
+          <button id="archive-selected-button" class="primary">Archive Selected</button>
+          <button id="close-all-duplicates-button" class="danger">Close All Duplicates</button>
+          <button id="close-selected-button">Close Selected</button>
+        </div>
+      </header>
+
+      <section class="toolbar">
+        <input
+          id="search-input"
+          type="search"
+          name="dashboard-search"
+          aria-label="Search tabs, domains, or sessions"
+          autocomplete="off"
+          placeholder="Search tabs, domains, or sessions…"
+        />
+        <label class="toolbar-field">
+          Group by
+          <select id="group-by-select">
+            <option value="none">None</option>
+            <option value="window">Window</option>
+            <option value="domain">Domain</option>
+          </select>
+        </label>
+        <label class="toolbar-field">
+          Sort by
+          <select id="sort-by-select">
+            <option value="recent">Recent</option>
+            <option value="title">Title</option>
+            <option value="domain">Root Domain</option>
+          </select>
+        </label>
+        <label class="toolbar-field">
+          Stale after
+          <select id="stale-threshold-select">
+            <option value="3">3 days</option>
+            <option value="7">7 days</option>
+            <option value="14">14 days</option>
+          </select>
+        </label>
+        <label class="toolbar-check">
+          <input id="sound-enabled-checkbox" type="checkbox" />
+          <span>Button sound</span>
+        </label>
+      </section>
+
+      <section class="content-grid">
+        <aside class="panel filters-panel">
+          <h2>Focus</h2>
+          <div class="stack" id="filter-list">
+            <button data-filter="all" class="filter-button active">All Tabs</button>
+            <button data-filter="current-window" class="filter-button">Current Window</button>
+            <button data-filter="duplicates" class="filter-button">Duplicates</button>
+            <button data-filter="stale" class="filter-button">Stale</button>
+            <button data-filter="sessions" class="filter-button">Sessions</button>
+          </div>
+
+          <div class="panel inset">
+            <h3>Snapshot</h3>
+            <div class="summary-stack" id="summary-list"></div>
+          </div>
+        </aside>
+
+        <section class="panel list-panel">
+          <div class="list-header">
+            <h2 id="list-title">All Tabs</h2>
+            <p id="list-subtitle" class="subtle"></p>
+          </div>
+          <div id="tab-groups" class="stack"></div>
+          <div id="sessions-panel" class="stack"></div>
+        </section>
+      </section>
+    </main>
+
+    <script type="module" src="dashboard.js"></script>
+  </body>
+  </html>
