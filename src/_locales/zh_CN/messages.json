@@ -1,0 +1,8 @@
+{
+  "appName": {
+    "message": "TabHarbor"
+  },
+  "appDescription": {
+    "message": "在不丢上下文的前提下，归档、去重并找回标签页。"
+  }
+}

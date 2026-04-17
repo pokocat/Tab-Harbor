@@ -17,3 +17,6 @@ for (const relativePath of [
 ]) {
   await cp(resolve(srcDir, relativePath), resolve(distDir, relativePath));
 }
+
+await cp(resolve(srcDir, "_locales"), resolve(distDir, "_locales"), { recursive: true });
+await cp(resolve(srcDir, "icons"), resolve(distDir, "icons"), { recursive: true });

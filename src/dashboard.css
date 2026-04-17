@@ -274,6 +274,19 @@ button:active {
   flex-wrap: wrap;
 }
 
+.collapse-button {
+  min-width: 36px;
+  padding: 5px 8px;
+}
+
+.group-card.collapsed .group-header {
+  border-bottom-color: transparent;
+}
+
+.group-card.collapsed .tab-list {
+  display: none;
+}
+
 .group-title {
   margin: 0;
   font-size: 12px;
@@ -377,6 +390,24 @@ button:active {
 
 .session-card {
   padding: 10px;
+}
+
+.app-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 14px;
+  padding: 2px 6px 0;
+}
+
+.footer-link {
+  color: var(--muted);
+  font-size: 11px;
+  text-decoration: none;
+}
+
+.footer-link:hover {
+  color: var(--accent);
+  text-decoration: underline;
 }
 
 @media (prefers-reduced-motion: reduce) {

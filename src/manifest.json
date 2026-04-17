@@ -1,16 +1,27 @@
 {
   "manifest_version": 3,
-  "name": "TabHarbor",
+  "name": "__MSG_appName__",
   "version": "0.1.0",
-  "description": "Archive, deduplicate, and recover tabs without losing context.",
+  "description": "__MSG_appDescription__",
+  "default_locale": "en",
   "minimum_chrome_version": "120",
+  "icons": {
+    "16": "icons/icon-16.png",
+    "32": "icons/icon-32.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
   "permissions": ["tabs", "storage"],
   "background": {
     "service_worker": "background.js",
     "type": "module"
   },
   "action": {
-    "default_title": "TabHarbor",
+    "default_title": "__MSG_appName__",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "32": "icons/icon-32.png"
+    },
     "default_popup": "popup.html"
   },
   "options_page": "dashboard.html"

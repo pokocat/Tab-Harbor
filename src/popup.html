@@ -3,27 +3,27 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>TabHarbor</title>
+    <title id="popup-document-title">TabHarbor</title>
     <link rel="stylesheet" href="popup.css" />
   </head>
   <body>
     <main class="popup-shell">
       <header class="hero">
         <div class="hero-brand">
-          <p class="eyebrow">TabHarbor</p>
+          <p id="popup-brand" class="eyebrow">TabHarbor</p>
         </div>
         <p id="hero-quote" class="subtle"></p>
       </header>
 
       <section class="card compact-card">
         <div class="section-header">
-          <h2>Quick Actions</h2>
-          <label class="switch" aria-label="Toggle sound feedback">
+          <h2 id="popup-quick-actions-title">Quick Actions</h2>
+          <label id="popup-sound-switch" class="switch" aria-label="Toggle sound feedback">
             <input id="sound-enabled-toggle" type="checkbox" />
             <span class="switch-track">
               <span class="switch-thumb"></span>
             </span>
-            <span class="switch-label">Sound</span>
+            <span id="popup-sound-label" class="switch-label">Sound</span>
           </label>
         </div>
         <div class="action-grid quick-action-grid">
@@ -35,7 +35,7 @@
                 <path d="M6 8.5h4" />
               </svg>
             </span>
-            <span>Archive</span>
+            <span id="popup-action-archive-label">Archive</span>
           </button>
           <button id="close-duplicates-button" class="action-warn">
             <span class="action-icon" aria-hidden="true">
@@ -44,7 +44,7 @@
                 <path d="M3.5 3.5h6v6" />
               </svg>
             </span>
-            <span>Dedup</span>
+            <span id="popup-action-dedup-label">Dedup</span>
           </button>
           <button id="open-dashboard-button" class="action-info">
             <span class="action-icon" aria-hidden="true">
@@ -54,40 +54,40 @@
                 <path d="M3.5 11.5h9" />
               </svg>
             </span>
-            <span>Manage</span>
+            <span id="popup-action-manage-label">Manage</span>
           </button>
         </div>
       </section>
 
       <section class="card">
         <div class="section-header">
-          <h2>Current Window</h2>
+          <h2 id="popup-current-window-title">Current Window</h2>
           <span id="current-window-meta" class="section-meta">Grouped by root domain</span>
         </div>
         <div class="list-controls">
           <div class="toolbar-mini radio-toolbar">
-            <span class="toolbar-label">Group</span>
+            <span id="popup-group-label" class="toolbar-label">Group</span>
             <div class="radio-row" id="popup-group-select" role="radiogroup" aria-label="Group tabs in popup">
               <label class="radio-pill">
                 <input type="radio" name="popup-group" value="domain" checked />
-                <span>Domain</span>
+                <span id="popup-group-domain-label">Domain</span>
               </label>
               <label class="radio-pill">
                 <input type="radio" name="popup-group" value="none" />
-                <span>None</span>
+                <span id="popup-group-none-label">None</span>
               </label>
             </div>
           </div>
           <div class="toolbar-mini radio-toolbar">
-            <span class="toolbar-label">Sort</span>
+            <span id="popup-sort-label" class="toolbar-label">Sort</span>
             <div class="radio-row" id="popup-sort-select" role="radiogroup" aria-label="Sort tabs in popup">
               <label class="radio-pill">
                 <input type="radio" name="popup-sort" value="recent" checked />
-                <span>Recent</span>
+                <span id="popup-sort-recent-label">Recent</span>
               </label>
               <label class="radio-pill">
                 <input type="radio" name="popup-sort" value="title" />
-                <span>Title</span>
+                <span id="popup-sort-title-label">Title</span>
               </label>
             </div>
           </div>
@@ -108,14 +108,14 @@
 
       <section class="card compact-card">
         <div class="section-header">
-          <h2>Duplicate Tabs</h2>
+          <h2 id="popup-duplicates-title">Duplicate Tabs</h2>
         </div>
         <div id="duplicate-clusters-list" class="stack dense-list"></div>
       </section>
 
       <section class="card">
         <div class="section-header">
-          <h2>Quick Search</h2>
+          <h2 id="popup-quick-search-title">Quick Search</h2>
         </div>
         <input
           id="quick-search-input"
@@ -131,17 +131,22 @@
 
       <section class="card compact-card" id="suggestions-card">
         <div class="section-header">
-          <h2>Suggestions</h2>
+          <h2 id="popup-suggestions-title">Suggestions</h2>
         </div>
         <div id="suggestions-list" class="stack"></div>
       </section>
 
       <section class="card compact-card">
         <div class="section-header">
-          <h2>Recent Sessions</h2>
+          <h2 id="popup-sessions-title">Recent Sessions</h2>
         </div>
         <div id="sessions-list" class="stack dense-list"></div>
       </section>
+
+      <footer class="popup-footer">
+        <a id="popup-contact-link" class="footer-link" href="mailto:pokocat@163.com" target="_blank" rel="noreferrer">Contact Author</a>
+        <a id="popup-issues-link" class="footer-link" href="https://github.com/pokocat/Tab-Harbor/issues" target="_blank" rel="noreferrer">GitHub Issues</a>
+      </footer>
     </main>
 
     <template id="metric-template">

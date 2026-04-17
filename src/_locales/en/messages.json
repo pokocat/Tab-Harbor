@@ -1,0 +1,8 @@
+{
+  "appName": {
+    "message": "TabHarbor"
+  },
+  "appDescription": {
+    "message": "Archive, deduplicate, and recover tabs without losing context."
+  }
+}

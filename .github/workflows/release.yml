@@ -1,0 +1,111 @@
+name: Release TabHarbor
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Git ref to build for a dev prerelease"
+        required: true
+        default: "main"
+      notes:
+        description: "Optional release notes for the dev prerelease"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.ref || github.ref }}
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build extension
+        run: npm run build
+
+      - name: Resolve release metadata
+        id: meta
+        shell: bash
+        run: |
+          VERSION="$(node -p "require('./src/manifest.json').version")"
+          SHORT_SHA="$(git rev-parse --short HEAD)"
+          TIMESTAMP="$(date -u +'%Y%m%d-%H%M%S')"
+
+          if [ "${{ github.event_name }}" = "push" ]; then
+            CHANNEL="release"
+            TAG_NAME="${GITHUB_REF_NAME}"
+            RELEASE_NAME="TabHarbor ${GITHUB_REF_NAME}"
+            PRERELEASE="false"
+            GENERATED_NOTES="true"
+            BODY=""
+          else
+            CHANNEL="dev"
+            TAG_NAME="dev-${TIMESTAMP}-${SHORT_SHA}"
+            RELEASE_NAME="TabHarbor Dev ${TIMESTAMP}"
+            PRERELEASE="true"
+            GENERATED_NOTES="false"
+            BODY="${{ inputs.notes }}"
+          fi
+
+          ARCHIVE_NAME="tabharbor-${VERSION}-${CHANNEL}.zip"
+
+          {
+            echo "version=${VERSION}"
+            echo "channel=${CHANNEL}"
+            echo "tag_name=${TAG_NAME}"
+            echo "release_name=${RELEASE_NAME}"
+            echo "prerelease=${PRERELEASE}"
+            echo "generated_notes=${GENERATED_NOTES}"
+            echo "archive_name=${ARCHIVE_NAME}"
+            echo "target_commitish=${GITHUB_SHA}"
+            echo "body<<EOF"
+            if [ -n "${BODY}" ]; then
+              printf '%s\n' "${BODY}"
+            else
+              printf 'Built from `%s` (%s).\n' "${GITHUB_SHA}" "${CHANNEL}"
+            fi
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Package extension
+        run: |
+          cd dist
+          zip -r "../${{ steps.meta.outputs.archive_name }}" .
+
+      - name: Upload packaged artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.meta.outputs.archive_name }}
+          path: ${{ steps.meta.outputs.archive_name }}
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.meta.outputs.tag_name }}
+          target_commitish: ${{ steps.meta.outputs.target_commitish }}
+          name: ${{ steps.meta.outputs.release_name }}
+          prerelease: ${{ steps.meta.outputs.prerelease }}
+          generate_release_notes: ${{ steps.meta.outputs.generated_notes }}
+          body: ${{ steps.meta.outputs.body }}
+          files: ${{ steps.meta.outputs.archive_name }}

@@ -1,4 +1,5 @@
 import { formatRelativeTime } from "./lib/format.js";
+import { createI18n, type I18nApi } from "./lib/i18n.js";
 import { getState, sendMessage } from "./lib/runtime.js";
 import { playUiSound } from "./lib/sound.js";
 import { summarizeDisplayUrl } from "./lib/url.js";
@@ -28,18 +29,14 @@ const metricTemplate = document.querySelector<HTMLTemplateElement>("#metric-temp
 let state: AppState | null = null;
 let popupGroupMode: PopupGroupMode = "domain";
 let popupSortMode: PopupSortMode = "recent";
-const HERO_QUOTES = [
-  "Attention is finite; a calm tab bar is borrowed time returned.",
-  "What stays open in the browser often stays open in the mind.",
-  "A useful tab is a tool. The rest is weather.",
-  "Order is not fewer tabs. It is knowing why each one remains.",
-  "Clarity begins when every open page can justify its place."
-] as const;
+let i18n: I18nApi = createI18n("auto");
 
 void initialize();
 
 async function initialize() {
   state = await getState();
+  i18n = createI18n(state.preferences.locale);
+  applyStaticCopy();
   soundEnabledToggle.checked = state.preferences.soundEnabled;
   setRadioGroupValue(popupGroupSelect, popupGroupMode);
   setRadioGroupValue(popupSortSelect, popupSortMode);
@@ -87,10 +84,10 @@ function renderSummary(appState: AppState) {
     linkLabel?: string;
     view?: "sessions" | "duplicates" | "all";
   }> = [
-    { label: "Open Tabs", value: appState.summary.totalTabs },
-    { label: "Windows", value: appState.summary.windowCount },
-    { label: "Duplicates", value: appState.summary.duplicateTabCount, linkLabel: "Review duplicate groups", view: "duplicates" },
-    { label: "Archived", value: appState.summary.archivedSessionCount, linkLabel: "Open archived sessions", view: "sessions" }
+    { label: i18n.t("popup.metric.openTabs"), value: appState.summary.totalTabs },
+    { label: i18n.t("popup.metric.windows"), value: appState.summary.windowCount },
+    { label: i18n.t("popup.metric.duplicates"), value: appState.summary.duplicateTabCount, linkLabel: i18n.t("popup.metric.reviewDuplicates"), view: "duplicates" },
+    { label: i18n.t("popup.metric.archived"), value: appState.summary.archivedSessionCount, linkLabel: i18n.t("popup.metric.openArchived"), view: "sessions" }
   ];
 
   for (const { label, value, linkLabel, view } of metrics) {
@@ -124,7 +121,7 @@ function renderQuickSearch(appState: AppState) {
   if (!query) {
     const empty = document.createElement("article");
     empty.className = "suggestion";
-    empty.innerHTML = `<p class="row-title">Search open tabs or archived sessions</p><p class="row-meta">Type a title, domain, or keyword to jump faster.</p>`;
+    empty.innerHTML = `<p class="row-title">${i18n.t("popup.search.helpTitle")}</p><p class="row-meta">${i18n.t("popup.search.helpMeta")}</p>`;
     quickSearchResults.append(empty);
     return;
   }
@@ -146,7 +143,7 @@ function renderQuickSearch(appState: AppState) {
         <div class="tab-title-line">
           ${renderFavicon(tab)}
           <p class="row-title tab-title-text">${escapeHtml(tab.title)}</p>
-          <span class="search-tag">Tab</span>
+          <span class="search-tag">${i18n.t("popup.search.tag.tab")}</span>
         </div>
         <p class="row-meta">${formatTabMeta(tab)}</p>
       </div>
@@ -160,8 +157,8 @@ function renderQuickSearch(appState: AppState) {
     item.type = "button";
     item.className = "suggestion search-result";
     item.innerHTML = `
-      <p class="row-title"><span>${escapeHtml(session.name)}</span><span class="search-tag">Session</span></p>
-      <p class="row-meta">${session.tabs.length} tabs · Saved ${formatRelativeTime(session.updatedAt)}</p>
+      <p class="row-title"><span>${escapeHtml(session.name)}</span><span class="search-tag">${i18n.t("popup.search.tag.session")}</span></p>
+      <p class="row-meta">${i18n.t("popup.sessions.saved", { count: session.tabs.length, time: formatRelativeTime(session.updatedAt, i18n.locale) })}</p>
     `;
     item.addEventListener("click", () => void restoreSession(session.id, "current-window"));
     quickSearchResults.append(item);
@@ -170,7 +167,7 @@ function renderQuickSearch(appState: AppState) {
   if (matchingTabs.length === 0 && matchingSessions.length === 0) {
     const empty = document.createElement("article");
     empty.className = "suggestion";
-    empty.innerHTML = `<p class="row-title">No matches for "${escapeHtml(query)}"</p>`;
+    empty.innerHTML = `<p class="row-title">${i18n.t("popup.search.noMatches", { query: escapeHtml(query) })}</p>`;
     quickSearchResults.append(empty);
   }
 }
@@ -181,7 +178,7 @@ function renderDuplicateClusters(clusters: DuplicateCluster[]) {
   if (clusters.length === 0) {
     const empty = document.createElement("article");
     empty.className = "suggestion";
-    empty.innerHTML = `<p class="row-title">No duplicate tabs right now</p><p class="row-meta">You are already down to one copy per page.</p>`;
+    empty.innerHTML = `<p class="row-title">${i18n.t("popup.duplicates.emptyTitle")}</p><p class="row-meta">${i18n.t("popup.duplicates.emptyMeta")}</p>`;
     duplicateClustersList.append(empty);
     return;
   }
@@ -192,9 +189,9 @@ function renderDuplicateClusters(clusters: DuplicateCluster[]) {
     item.innerHTML = `
       <div>
         <p class="row-title">${escapeHtml(cluster.label)}</p>
-        <p class="row-meta">${cluster.tabs.length} copies · keep newest tab</p>
+        <p class="row-meta">${i18n.t("popup.duplicates.keepNewest", { count: cluster.tabs.length })}</p>
       </div>
-      <button type="button" class="duplicate-action" data-action="close-cluster">Clean</button>
+      <button type="button" class="duplicate-action" data-action="close-cluster">${i18n.t("popup.duplicates.clean")}</button>
     `;
     item.querySelector<HTMLButtonElement>('[data-action="close-cluster"]')?.addEventListener("click", () => {
       void closeCluster(cluster);
@@ -208,17 +205,17 @@ function renderSuggestions(appState: AppState) {
 
   const suggestions: string[] = [];
   if (appState.summary.duplicateClusterCount > 0) {
-    suggestions.push(`${appState.summary.duplicateClusterCount} duplicate groups are ready to review.`);
+    suggestions.push(i18n.t("popup.suggestion.duplicates", { count: appState.summary.duplicateClusterCount }));
   }
   if (appState.summary.staleTabCount > 0) {
-    suggestions.push(`${appState.summary.staleTabCount} tabs look stale based on your inactivity threshold.`);
+    suggestions.push(i18n.t("popup.suggestion.stale", { count: appState.summary.staleTabCount }));
   }
   if (appState.summary.totalTabs > 20) {
-    suggestions.push(`You currently have ${appState.summary.totalTabs} open tabs. Archiving a session may help you switch context faster.`);
+    suggestions.push(i18n.t("popup.suggestion.totalTabs", { count: appState.summary.totalTabs }));
   }
 
   if (suggestions.length === 0) {
-    suggestions.push("Your tab load looks healthy right now. Sessions are still available when you want to pause work safely.");
+    suggestions.push(i18n.t("popup.suggestion.healthy"));
   }
 
   for (const message of suggestions) {
@@ -248,7 +245,7 @@ function renderCurrentWindow(tabs: TabSnapshot[]) {
   if (currentWindowTabs.length === 0) {
     const empty = document.createElement("article");
     empty.className = "suggestion";
-    empty.innerHTML = `<p class="row-title">No tabs in the current window</p>`;
+    empty.innerHTML = `<p class="row-title">${i18n.t("popup.current.empty")}</p>`;
     currentWindowList.append(empty);
     return;
   }
@@ -256,7 +253,7 @@ function renderCurrentWindow(tabs: TabSnapshot[]) {
   if (visibleTabs.length === 0) {
     const empty = document.createElement("article");
     empty.className = "suggestion";
-    empty.innerHTML = `<p class="row-title">No tabs match "${escapeHtml(query)}"</p><p class="row-meta">Try a title, domain, or URL keyword.</p>`;
+    empty.innerHTML = `<p class="row-title">${i18n.t("popup.current.noMatchTitle", { query: escapeHtml(query) })}</p><p class="row-meta">${i18n.t("popup.current.noMatchMeta")}</p>`;
     currentWindowList.append(empty);
     return;
   }
@@ -304,7 +301,7 @@ function renderSessions(sessions: SavedSession[]) {
   if (sessions.length === 0) {
     const empty = document.createElement("article");
     empty.className = "session-row";
-    empty.innerHTML = `<p class="row-title">No archived sessions yet</p><p class="row-meta">Archive a window to save a restorable snapshot.</p>`;
+    empty.innerHTML = `<p class="row-title">${i18n.t("popup.sessions.emptyTitle")}</p><p class="row-meta">${i18n.t("popup.sessions.emptyMeta")}</p>`;
     sessionsList.append(empty);
     return;
   }
@@ -314,10 +311,10 @@ function renderSessions(sessions: SavedSession[]) {
     item.className = "session-row";
     item.innerHTML = `
       <p class="row-title">${escapeHtml(session.name)}</p>
-      <p class="row-meta">${session.tabs.length} tabs · Saved ${formatRelativeTime(session.updatedAt)}</p>
+      <p class="row-meta">${i18n.t("popup.sessions.saved", { count: session.tabs.length, time: formatRelativeTime(session.updatedAt, i18n.locale) })}</p>
       <div class="session-actions">
-        <button type="button" data-action="current">Restore Here</button>
-        <button type="button" data-action="new">New Window</button>
+        <button type="button" data-action="current">${i18n.t("popup.sessions.restoreHere")}</button>
+        <button type="button" data-action="new">${i18n.t("popup.sessions.newWindow")}</button>
       </div>
     `;
 
@@ -346,6 +343,8 @@ async function archiveCurrentWindow() {
   if (response.ok && response.state) {
     await playUiSound(response.state.preferences, "archive");
     state = response.state;
+    i18n = createI18n(state.preferences.locale);
+    applyStaticCopy();
     soundEnabledToggle.checked = state.preferences.soundEnabled;
     render(state);
   }
@@ -379,6 +378,8 @@ async function closeCluster(cluster: DuplicateCluster) {
   if (response.ok && response.state) {
     await playUiSound(response.state.preferences, "close");
     state = response.state;
+    i18n = createI18n(state.preferences.locale);
+    applyStaticCopy();
     soundEnabledToggle.checked = state.preferences.soundEnabled;
     render(state);
   }
@@ -389,6 +390,8 @@ async function restoreSession(sessionId: string, target: "new-window" | "current
   if (response.ok && response.state) {
     await playUiSound(response.state.preferences, "restore");
     state = response.state;
+    i18n = createI18n(state.preferences.locale);
+    applyStaticCopy();
     soundEnabledToggle.checked = state.preferences.soundEnabled;
     render(state);
   }
@@ -404,6 +407,8 @@ async function closeSingleTab(tabId: number) {
   if (response.ok && response.state) {
     await playUiSound(response.state.preferences, "close");
     state = response.state;
+    i18n = createI18n(state.preferences.locale);
+    applyStaticCopy();
     soundEnabledToggle.checked = state.preferences.soundEnabled;
     render(state);
   }
@@ -427,6 +432,8 @@ async function updateSoundPreference() {
   });
   if (response.ok && response.state) {
     state = response.state;
+    i18n = createI18n(state.preferences.locale);
+    applyStaticCopy();
     soundEnabledToggle.checked = state.preferences.soundEnabled;
     await playUiSound(state.preferences, "focus");
     render(state);
@@ -466,7 +473,7 @@ function renderFavicon(tab: Pick<TabSnapshot, "favIconUrl" | "domain">): string 
 }
 
 function formatTabMeta(tab: Pick<TabSnapshot, "url" | "lastAccessed">): string {
-  return `${summarizeDisplayUrl(tab.url)} · ${formatRelativeTime(tab.lastAccessed)}`;
+  return `${summarizeDisplayUrl(tab.url, i18n.locale)} · ${formatRelativeTime(tab.lastAccessed, i18n.locale)}`;
 }
 
 function createTabRow(tab: TabSnapshot): HTMLElement {
@@ -481,8 +488,8 @@ function createTabRow(tab: TabSnapshot): HTMLElement {
       <p class="row-meta">${formatTabMeta(tab)}</p>
     </div>
     <div class="tab-row-actions">
-      <button type="button" class="icon-button focus" data-action="focus" aria-label="Focus ${escapeHtml(tab.title)}">Go</button>
-      <button type="button" class="icon-button close" data-action="close" aria-label="Close ${escapeHtml(tab.title)}">×</button>
+      <button type="button" class="icon-button focus" data-action="focus" aria-label="${escapeAttribute(i18n.t("popup.button.focusAria", { title: tab.title }))}">${i18n.t("popup.button.focus")}</button>
+      <button type="button" class="icon-button close" data-action="close" aria-label="${escapeAttribute(i18n.t("popup.button.closeAria", { title: tab.title }))}">${i18n.t("popup.button.close")}</button>
     </div>
   `;
   item.querySelector<HTMLButtonElement>('[data-action="focus"]')?.addEventListener("click", () => {
@@ -495,12 +502,11 @@ function createTabRow(tab: TabSnapshot): HTMLElement {
 }
 
 function describeCurrentWindowMeta(visibleTabs: number, totalTabs: number, filtered: boolean): string {
-  const sortLabel = popupSortMode === "title" ? "A-Z" : "Recent first";
-  const countLabel = filtered ? `${visibleTabs}/${totalTabs} tabs` : `${totalTabs} tabs`;
+  const sortLabel = popupSortMode === "title" ? i18n.t("popup.sortLabel.title") : i18n.t("popup.sortLabel.recent");
   if (popupGroupMode === "domain") {
-    return `${countLabel} · grouped by root domain · ${sortLabel}`;
+    return i18n.t(filtered ? "popup.current.groupedFiltered" : "popup.current.grouped", { visible: visibleTabs, total: totalTabs, sort: sortLabel });
   }
-  return `${countLabel} · flat list · ${sortLabel}`;
+  return i18n.t(filtered ? "popup.current.flatFiltered" : "popup.current.flat", { visible: visibleTabs, total: totalTabs, sort: sortLabel });
 }
 
 function groupTabsByRootDomain(tabs: TabSnapshot[]): Map<string, TabSnapshot[]> {
@@ -538,8 +544,44 @@ function sortPopupTabs(tabs: TabSnapshot[], sort: PopupSortMode): TabSnapshot[] 
 }
 
 function pickHeroQuote(): string {
-  const index = Math.floor(Math.random() * HERO_QUOTES.length);
-  return HERO_QUOTES[index] ?? HERO_QUOTES[0];
+  const quotes = ["popup.quote.1", "popup.quote.2", "popup.quote.3", "popup.quote.4", "popup.quote.5"] as const;
+  const index = Math.floor(Math.random() * quotes.length);
+  return i18n.t(quotes[index] ?? quotes[0]);
+}
+
+function applyStaticCopy() {
+  document.title = i18n.t("popup.title");
+  document.documentElement.lang = i18n.locale;
+  setText("popup-brand", i18n.t("popup.hero.brand"));
+  setText("popup-quick-actions-title", i18n.t("popup.section.quickActions"));
+  setText("popup-sound-label", i18n.t("popup.sound.label"));
+  mustElement("popup-sound-switch").setAttribute("aria-label", i18n.t("popup.sound.aria"));
+  setText("popup-action-archive-label", i18n.t("popup.action.archive"));
+  setText("popup-action-dedup-label", i18n.t("popup.action.dedup"));
+  setText("popup-action-manage-label", i18n.t("popup.action.manage"));
+  setText("popup-current-window-title", i18n.t("popup.section.currentWindow"));
+  setText("popup-group-label", i18n.t("popup.group.label"));
+  popupGroupSelect.setAttribute("aria-label", i18n.t("popup.group.aria"));
+  setText("popup-group-domain-label", i18n.t("popup.group.domain"));
+  setText("popup-group-none-label", i18n.t("popup.group.none"));
+  setText("popup-sort-label", i18n.t("popup.sort.label"));
+  popupSortSelect.setAttribute("aria-label", i18n.t("popup.sort.aria"));
+  setText("popup-sort-recent-label", i18n.t("popup.sort.recent"));
+  setText("popup-sort-title-label", i18n.t("popup.sort.title"));
+  currentWindowSearchInput.setAttribute("aria-label", i18n.t("popup.currentSearch.aria"));
+  currentWindowSearchInput.placeholder = i18n.t("popup.currentSearch.placeholder");
+  setText("popup-duplicates-title", i18n.t("popup.section.duplicates"));
+  setText("popup-quick-search-title", i18n.t("popup.section.quickSearch"));
+  quickSearchInput.setAttribute("aria-label", i18n.t("popup.quickSearch.aria"));
+  quickSearchInput.placeholder = i18n.t("popup.quickSearch.placeholder");
+  setText("popup-suggestions-title", i18n.t("popup.section.suggestions"));
+  setText("popup-sessions-title", i18n.t("popup.section.sessions"));
+  setText("popup-contact-link", i18n.t("popup.footer.contact"));
+  setText("popup-issues-link", i18n.t("popup.footer.issues"));
+}
+
+function setText(id: string, value: string) {
+  mustElement(id).textContent = value;
 }
 
 function getRadioGroupValue(container: HTMLElement): string {

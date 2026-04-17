@@ -585,6 +585,24 @@ button:hover {
   letter-spacing: 0.08em;
 }
 
+.popup-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 1px 2px 0;
+}
+
+.footer-link {
+  color: var(--muted);
+  font-size: 10.5px;
+  text-decoration: none;
+}
+
+.footer-link:hover {
+  color: var(--accent-strong);
+  text-decoration: underline;
+}
+
 @media (prefers-reduced-motion: reduce) {
   button {
     transition: none;

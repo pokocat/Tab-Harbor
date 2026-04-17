@@ -9,7 +9,8 @@ export const DEFAULT_PREFERENCES: UserPreference = {
   staleThresholdDays: 7,
   groupByDefault: "window",
   showDuplicateHints: true,
-  soundEnabled: true
+  soundEnabled: true,
+  locale: "auto"
 };
 
 export const TRACKING_QUERY_PREFIXES = ["utm_", "fbclid", "gclid", "mc_cid", "mc_eid"];

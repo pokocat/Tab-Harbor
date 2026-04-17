@@ -110,20 +110,21 @@ function decodeUrlPart(value: string): string {
   }
 }
 
-export function summarizeDisplayUrl(url: string): string {
+export function summarizeDisplayUrl(url: string, locale = chrome.i18n.getUILanguage()): string {
+  const isChinese = locale.toLowerCase().startsWith("zh");
   try {
     const parsed = new URL(url);
 
     if (parsed.protocol === "chrome:" || parsed.protocol === "about:" || parsed.protocol === "edge:") {
       const detail = `${decodeUrlPart(parsed.hostname)}${decodeUrlPart(parsed.pathname)}`.trim();
-      return detail || "Browser page";
+      return detail || (isChinese ? "浏览器页面" : "Browser page");
     }
 
     const path = parsed.pathname === "/" ? "" : decodeUrlPart(parsed.pathname);
     const search = parsed.search ? decodeUrlPart(parsed.search) : "";
     const detail = `${path}${search}`.trim();
-    return detail || "Homepage";
+    return detail || (isChinese ? "首页" : "Homepage");
   } catch {
-    return "Browser page";
+    return isChinese ? "浏览器页面" : "Browser page";
   }
 }

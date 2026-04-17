@@ -1,4 +1,5 @@
 import type { AppState } from "./types.js";
+import type { LocalePreference } from "./types.js";
 
 type RequestMessage =
   | { type: "GET_APP_STATE" }
@@ -16,6 +17,7 @@ type RequestMessage =
         groupByDefault?: "window" | "domain";
         showDuplicateHints?: boolean;
         soundEnabled?: boolean;
+        locale?: LocalePreference;
       };
     };
 

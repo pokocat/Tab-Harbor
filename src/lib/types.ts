@@ -1,4 +1,5 @@
 export type GroupByMode = "window" | "domain";
+export type LocalePreference = "auto" | "en" | "zh-CN";
 
 export interface StoredTabReference {
   title: string;
@@ -21,6 +22,7 @@ export interface UserPreference {
   groupByDefault: GroupByMode;
   showDuplicateHints: boolean;
   soundEnabled: boolean;
+  locale: LocalePreference;
 }
 
 export interface TabSnapshot {
@@ -84,4 +86,5 @@ export interface UpdatePreferencesPayload {
   groupByDefault?: GroupByMode;
   showDuplicateHints?: boolean;
   soundEnabled?: boolean;
+  locale?: LocalePreference;
 }

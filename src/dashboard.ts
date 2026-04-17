@@ -1,4 +1,5 @@
 import { formatRelativeTime } from "./lib/format.js";
+import { createI18n, type I18nApi } from "./lib/i18n.js";
 import { getState, sendMessage } from "./lib/runtime.js";
 import { playUiSound } from "./lib/sound.js";
 import { summarizeDisplayUrl } from "./lib/url.js";
@@ -22,18 +23,23 @@ const archiveSelectedButton = must<HTMLButtonElement>("archive-selected-button")
 const closeAllDuplicatesButton = must<HTMLButtonElement>("close-all-duplicates-button");
 const closeSelectedButton = must<HTMLButtonElement>("close-selected-button");
 const soundEnabledCheckbox = must<HTMLInputElement>("sound-enabled-checkbox");
+const localeSelect = must<HTMLSelectElement>("locale-select");
 
 let state: AppState | null = null;
 let activeFilter: FilterMode = "all";
 const selectedTabIds = new Set<number>();
+const collapsedWindowIds = new Set<number>();
 let sortMode: SortMode = "recent";
+let i18n: I18nApi = createI18n("auto");
 
 void initialize();
 
 async function initialize() {
   state = await getState();
+  i18n = createI18n(state.preferences.locale);
   applyQueryState();
   applyPreferences(state);
+  applyStaticCopy();
   render();
   bindEvents();
 }
@@ -47,6 +53,7 @@ function bindEvents() {
   });
   staleThresholdSelect.addEventListener("change", () => void handleThresholdChange());
   soundEnabledCheckbox.addEventListener("change", () => void handleSoundChange());
+  localeSelect.addEventListener("change", () => void handleLocaleChange());
   archiveSelectedButton.addEventListener("click", () => void archiveSelected());
   closeAllDuplicatesButton.addEventListener("click", () => void closeAllDuplicates());
   closeSelectedButton.addEventListener("click", () => void closeSelected());
@@ -64,6 +71,7 @@ function applyPreferences(appState: AppState) {
   groupBySelect.value = appState.preferences.groupByDefault;
   staleThresholdSelect.value = String(appState.preferences.staleThresholdDays);
   soundEnabledCheckbox.checked = appState.preferences.soundEnabled;
+  localeSelect.value = appState.preferences.locale;
   sortBySelect.value = sortMode;
 }
 
@@ -98,8 +106,8 @@ function render() {
   if (activeFilter === "sessions") {
     renderSessions(state.sessions);
     tabGroups.replaceChildren();
-    listTitle.textContent = "Archived Sessions";
-    listSubtitle.textContent = `${state.sessions.length} saved sessions`;
+    listTitle.textContent = i18n.t("dashboard.list.archivedSessions");
+    listSubtitle.textContent = i18n.t("dashboard.list.savedSessions", { count: state.sessions.length });
     return;
   }
 
@@ -108,32 +116,57 @@ function render() {
   const groupedTabs = groupTabs(filteredTabs, groupBySelect.value as GroupMode, sortMode);
 
   listTitle.textContent = titleForFilter(activeFilter);
-  listSubtitle.textContent = `${filteredTabs.length} visible tabs · ${selectedTabIds.size} selected`;
+  listSubtitle.textContent = i18n.t("dashboard.list.visibleTabs", { visible: filteredTabs.length, selected: selectedTabIds.size });
 
   tabGroups.replaceChildren();
   for (const [groupName, tabs] of groupedTabs) {
     const groupCard = document.createElement("section");
     groupCard.className = "group-card";
-    const groupWindowId = groupName.startsWith("Window ") ? extractWindowId(groupName) : null;
+    const groupWindowId = groupBySelect.value === "window" ? tabs[0]?.windowId ?? null : null;
+    const isCollapsed = groupWindowId !== null && collapsedWindowIds.has(groupWindowId);
     const groupDuplicateCloseIds =
       groupBySelect.value === "window" && groupWindowId !== null
         ? getWindowDuplicateCloseIds(state.tabs, groupWindowId)
         : [];
+    if (isCollapsed) {
+      groupCard.classList.add("collapsed");
+    }
     groupCard.innerHTML = `
       <div class="group-header">
         <div>
           <h3 class="group-title">${escapeHtml(groupName)}</h3>
-          <p class="group-meta">${tabs.length} tabs</p>
+          <p class="group-meta">${i18n.t("dashboard.group.tabs", { count: tabs.length })}</p>
         </div>
         <div class="group-header-actions">
           ${
+            groupWindowId !== null
+              ? `<button type="button" class="action-button ghost collapse-button" data-action="toggle-collapse">${i18n.t(
+                  isCollapsed ? "dashboard.group.expand" : "dashboard.group.collapse"
+                )}</button>`
+              : ""
+          }
+          ${
             groupDuplicateCloseIds.length > 0
-              ? `<button type="button" class="action-button danger" data-action="close-window-duplicates">Close ${groupDuplicateCloseIds.length} duplicates</button>`
+              ? `<button type="button" class="action-button danger" data-action="close-window-duplicates">${i18n.t("dashboard.group.closeWindowDuplicates", { count: groupDuplicateCloseIds.length })}</button>`
               : ""
           }
         </div>
       </div>
     `;
+
+    groupCard
+      .querySelector<HTMLButtonElement>('[data-action="toggle-collapse"]')
+      ?.addEventListener("click", () => {
+        if (groupWindowId === null) {
+          return;
+        }
+        if (collapsedWindowIds.has(groupWindowId)) {
+          collapsedWindowIds.delete(groupWindowId);
+        } else {
+          collapsedWindowIds.add(groupWindowId);
+        }
+        render();
+      });
 
     groupCard
       .querySelector<HTMLButtonElement>('[data-action="close-window-duplicates"]')
@@ -154,10 +187,10 @@ function render() {
 function renderSummary(appState: AppState) {
   summaryList.replaceChildren();
   const rows: Array<[string, number]> = [
-    ["Open tabs", appState.summary.totalTabs],
-    ["Duplicate groups", appState.summary.duplicateClusterCount],
-    ["Stale tabs", appState.summary.staleTabCount],
-    ["Archived sessions", appState.summary.archivedSessionCount]
+    [i18n.t("dashboard.summary.openTabs"), appState.summary.totalTabs],
+    [i18n.t("dashboard.summary.duplicateGroups"), appState.summary.duplicateClusterCount],
+    [i18n.t("dashboard.summary.staleTabs"), appState.summary.staleTabCount],
+    [i18n.t("dashboard.summary.archivedSessions"), appState.summary.archivedSessionCount]
   ];
 
   for (const [label, value] of rows) {
@@ -193,11 +226,11 @@ function renderTabCard(tab: TabSnapshot): HTMLElement {
     </div>
     <p class="subtle tab-meta">${formatTabMeta(tab)}</p>
     <div class="pill-row">
-      ${tab.pinned ? '<span class="pill">Pinned</span>' : ""}
-      ${tab.active ? '<span class="pill">Active</span>' : ""}
-      ${tab.audible ? '<span class="pill">Audible</span>' : ""}
-      ${tab.isStale ? '<span class="pill">Stale</span>' : ""}
-      ${tab.isEmptyPage ? '<span class="pill">Empty page</span>' : ""}
+      ${tab.pinned ? `<span class="pill">${i18n.t("dashboard.tab.pinned")}</span>` : ""}
+      ${tab.active ? `<span class="pill">${i18n.t("dashboard.tab.active")}</span>` : ""}
+      ${tab.audible ? `<span class="pill">${i18n.t("dashboard.tab.audible")}</span>` : ""}
+      ${tab.isStale ? `<span class="pill">${i18n.t("dashboard.tab.stale")}</span>` : ""}
+      ${tab.isEmptyPage ? `<span class="pill">${i18n.t("dashboard.tab.emptyPage")}</span>` : ""}
     </div>
   `;
 
@@ -205,13 +238,13 @@ function renderTabCard(tab: TabSnapshot): HTMLElement {
   actions.className = "tab-actions";
 
   const focusButton = document.createElement("button");
-  focusButton.textContent = "Focus Tab";
+  focusButton.textContent = i18n.t("dashboard.tab.focus");
   focusButton.type = "button";
   focusButton.className = "action-button focus-button";
   focusButton.addEventListener("click", () => void focusTab(tab));
 
   const closeButton = document.createElement("button");
-  closeButton.textContent = "Close Tab";
+  closeButton.textContent = i18n.t("dashboard.tab.close");
   closeButton.type = "button";
   closeButton.className = "action-button close-button";
   closeButton.addEventListener("click", () => void closeTabs([tab.id], "close"));
@@ -239,11 +272,11 @@ function renderSessions(sessions: SavedSession[]) {
     card.className = "session-card";
     card.innerHTML = `
       <h3 class="group-title">${escapeHtml(session.name)}</h3>
-      <p class="subtle">${session.tabs.length} tabs · Saved ${formatRelativeTime(session.updatedAt)}</p>
+      <p class="subtle">${i18n.t("dashboard.session.saved", { count: session.tabs.length, time: formatRelativeTime(session.updatedAt, i18n.locale) })}</p>
       <div class="session-actions">
-        <button type="button" class="action-button focus-button" data-action="current">Restore Here</button>
-        <button type="button" class="action-button ghost" data-action="new">Restore in New Window</button>
-        <button type="button" class="action-button close-button" data-action="delete">Delete Session</button>
+        <button type="button" class="action-button focus-button" data-action="current">${i18n.t("dashboard.session.restoreHere")}</button>
+        <button type="button" class="action-button ghost" data-action="new">${i18n.t("dashboard.session.restoreNew")}</button>
+        <button type="button" class="action-button close-button" data-action="delete">${i18n.t("dashboard.session.delete")}</button>
       </div>
     `;
 
@@ -291,7 +324,7 @@ function groupTabs(tabs: TabSnapshot[], mode: GroupMode, sort: SortMode): Map<st
 
   for (const tab of tabs) {
     const key =
-      mode === "none" ? "Results" : mode === "window" ? `Window ${tab.windowId}` : tab.rootDomain;
+      mode === "none" ? i18n.t("dashboard.group.results") : mode === "window" ? i18n.t("dashboard.group.window", { id: tab.windowId }) : tab.rootDomain;
     const bucket = groups.get(key);
     if (bucket) {
       bucket.push(tab);
@@ -332,16 +365,16 @@ function sortTabs(tabs: TabSnapshot[], sort: SortMode): TabSnapshot[] {
 function titleForFilter(filter: FilterMode): string {
   switch (filter) {
     case "current-window":
-      return "Current Window";
+      return i18n.t("dashboard.title.currentWindow");
     case "duplicates":
-      return "Duplicate Tabs";
+      return i18n.t("dashboard.title.duplicates");
     case "stale":
-      return "Stale Tabs";
+      return i18n.t("dashboard.title.stale");
     case "sessions":
-      return "Archived Sessions";
+      return i18n.t("dashboard.title.sessions");
     case "all":
     default:
-      return "All Tabs";
+      return i18n.t("dashboard.title.all");
   }
 }
 
@@ -350,6 +383,9 @@ async function handleGroupByChange() {
   const response = await sendMessage({ type: "UPDATE_PREFERENCES", payload: { groupByDefault: value } });
   if (response.ok && response.state) {
     state = response.state;
+    i18n = createI18n(state.preferences.locale);
+    applyPreferences(state);
+    applyStaticCopy();
     render();
   }
 }
@@ -359,6 +395,9 @@ async function handleThresholdChange() {
   const response = await sendMessage({ type: "UPDATE_PREFERENCES", payload: { staleThresholdDays } });
   if (response.ok && response.state) {
     state = response.state;
+    i18n = createI18n(state.preferences.locale);
+    applyPreferences(state);
+    applyStaticCopy();
     render();
   }
 }
@@ -370,8 +409,25 @@ async function handleSoundChange() {
   });
   if (response.ok && response.state) {
     state = response.state;
+    i18n = createI18n(state.preferences.locale);
+    applyPreferences(state);
+    applyStaticCopy();
     soundEnabledCheckbox.checked = state.preferences.soundEnabled;
     await playUiSound(state.preferences, "focus");
+    render();
+  }
+}
+
+async function handleLocaleChange() {
+  const response = await sendMessage({
+    type: "UPDATE_PREFERENCES",
+    payload: { locale: localeSelect.value as "auto" | "en" | "zh-CN" }
+  });
+  if (response.ok && response.state) {
+    state = response.state;
+    i18n = createI18n(state.preferences.locale);
+    applyPreferences(state);
+    applyStaticCopy();
     render();
   }
 }
@@ -389,6 +445,9 @@ async function archiveSelected() {
     selectedTabIds.clear();
     await playUiSound(response.state.preferences, "archive");
     state = response.state;
+    i18n = createI18n(state.preferences.locale);
+    applyPreferences(state);
+    applyStaticCopy();
     render();
   }
 }
@@ -409,6 +468,9 @@ async function closeTabs(tabIds: number[], sound: "focus" | "close" | "archive" 
     }
     await playUiSound(response.state.preferences, sound);
     state = response.state;
+    i18n = createI18n(state.preferences.locale);
+    applyPreferences(state);
+    applyStaticCopy();
     render();
   }
 }
@@ -421,6 +483,9 @@ async function focusTab(tab: TabSnapshot) {
   if (response.ok && response.state) {
     await playUiSound(response.state.preferences, "focus");
     state = response.state;
+    i18n = createI18n(state.preferences.locale);
+    applyPreferences(state);
+    applyStaticCopy();
     render();
   }
 }
@@ -430,6 +495,9 @@ async function restoreSession(sessionId: string, target: "new-window" | "current
   if (response.ok && response.state) {
     await playUiSound(response.state.preferences, "restore");
     state = response.state;
+    i18n = createI18n(state.preferences.locale);
+    applyPreferences(state);
+    applyStaticCopy();
     render();
   }
 }
@@ -439,6 +507,9 @@ async function deleteSession(sessionId: string) {
   if (response.ok && response.state) {
     await playUiSound(response.state.preferences, "close");
     state = response.state;
+    i18n = createI18n(state.preferences.locale);
+    applyPreferences(state);
+    applyStaticCopy();
     render();
   }
 }
@@ -475,11 +546,6 @@ function getWindowDuplicateCloseIds(tabs: TabSnapshot[], windowId: number): numb
   return getDuplicateCloseIds(tabs.filter((tab) => tab.windowId === windowId));
 }
 
-function extractWindowId(label: string): number | null {
-  const match = label.match(/^Window (\d+)$/);
-  return match ? Number(match[1]) : null;
-}
-
 function must<T extends HTMLElement>(id: string): T {
   const element = document.getElementById(id);
   if (!element) {
@@ -497,7 +563,70 @@ function renderFavicon(tab: Pick<TabSnapshot, "favIconUrl" | "domain">): string 
 }
 
 function formatTabMeta(tab: Pick<TabSnapshot, "url" | "lastAccessed" | "domain">): string {
-  return `${summarizeDisplayUrl(tab.url)} · ${formatRelativeTime(tab.lastAccessed)}`;
+  return `${summarizeDisplayUrl(tab.url, i18n.locale)} · ${formatRelativeTime(tab.lastAccessed, i18n.locale)}`;
+}
+
+function applyStaticCopy() {
+  document.title = i18n.t("dashboard.title");
+  document.documentElement.lang = i18n.locale;
+  setText("dashboard-hero-eyebrow", i18n.t("dashboard.hero.eyebrow"));
+  setText("dashboard-hero-title", i18n.t("dashboard.hero.title"));
+  setText("dashboard-hero-meta", i18n.t("dashboard.hero.meta"));
+  archiveSelectedButton.textContent = i18n.t("dashboard.button.archiveSelected");
+  closeAllDuplicatesButton.textContent = i18n.t("dashboard.button.closeAllDuplicates");
+  closeSelectedButton.textContent = i18n.t("dashboard.button.closeSelected");
+  searchInput.setAttribute("aria-label", i18n.t("dashboard.search.aria"));
+  searchInput.placeholder = i18n.t("dashboard.search.placeholder");
+  setToolbarField("dashboard-group-field", i18n.t("dashboard.toolbar.groupBy"));
+  setOptionText(groupBySelect, "none", i18n.t("dashboard.toolbar.group.none"));
+  setOptionText(groupBySelect, "window", i18n.t("dashboard.toolbar.group.window"));
+  setOptionText(groupBySelect, "domain", i18n.t("dashboard.toolbar.group.domain"));
+  setToolbarField("dashboard-sort-field", i18n.t("dashboard.toolbar.sortBy"));
+  setOptionText(sortBySelect, "recent", i18n.t("dashboard.toolbar.sort.recent"));
+  setOptionText(sortBySelect, "title", i18n.t("dashboard.toolbar.sort.title"));
+  setOptionText(sortBySelect, "domain", i18n.t("dashboard.toolbar.sort.domain"));
+  setToolbarField("dashboard-stale-field", i18n.t("dashboard.toolbar.staleAfter"));
+  setOptionText(staleThresholdSelect, "3", i18n.t("common.days", { count: 3 }));
+  setOptionText(staleThresholdSelect, "7", i18n.t("common.days", { count: 7 }));
+  setOptionText(staleThresholdSelect, "14", i18n.t("common.days", { count: 14 }));
+  setToolbarField("dashboard-language-field", i18n.t("dashboard.toolbar.language"));
+  setOptionText(localeSelect, "auto", i18n.t("locale.auto"));
+  setOptionText(localeSelect, "zh-CN", i18n.t("locale.chineseSimplified"));
+  setOptionText(localeSelect, "en", i18n.t("locale.english"));
+  setCheckLabel("dashboard-sound-field", i18n.t("dashboard.toolbar.sound"));
+  setText("dashboard-focus-title", i18n.t("dashboard.focus.title"));
+  setFilterText("all", i18n.t("dashboard.filter.all"));
+  setFilterText("current-window", i18n.t("dashboard.filter.currentWindow"));
+  setFilterText("duplicates", i18n.t("dashboard.filter.duplicates"));
+  setFilterText("stale", i18n.t("dashboard.filter.stale"));
+  setFilterText("sessions", i18n.t("dashboard.filter.sessions"));
+  setText("dashboard-snapshot-title", i18n.t("dashboard.snapshot.title"));
+  setText("dashboard-contact-link", i18n.t("dashboard.footer.contact"));
+  setText("dashboard-issues-link", i18n.t("dashboard.footer.issues"));
+}
+
+function setText(id: string, value: string) {
+  must<HTMLElement>(id).textContent = value;
+}
+
+function setToolbarField(id: string, label: string) {
+  must<HTMLElement>(id).querySelector(".field-label")!.textContent = label;
+}
+
+function setCheckLabel(id: string, label: string) {
+  const field = must<HTMLElement>(id);
+  field.querySelector("span")!.textContent = label;
+}
+
+function setFilterText(filter: FilterMode, value: string) {
+  filterList.querySelector<HTMLButtonElement>(`[data-filter="${filter}"]`)!.textContent = value;
+}
+
+function setOptionText(select: HTMLSelectElement, value: string, label: string) {
+  const option = select.querySelector<HTMLOptionElement>(`option[value="${CSS.escape(value)}"]`);
+  if (option) {
+    option.textContent = label;
+  }
 }
 
 function escapeAttribute(value: string): string {

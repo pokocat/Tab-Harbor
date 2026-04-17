@@ -3,16 +3,16 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>TabHarbor Dashboard</title>
+    <title id="dashboard-document-title">TabHarbor Dashboard</title>
     <link rel="stylesheet" href="dashboard.css" />
   </head>
   <body>
     <main class="dashboard-shell">
       <header class="hero">
         <div>
-          <p class="eyebrow">TabHarbor Dashboard</p>
-          <h1>Manage sessions, duplicates, and browsing clutter</h1>
-          <p class="subtle">Built with least-privilege permissions, local-only storage, and reversible actions.</p>
+          <p id="dashboard-hero-eyebrow" class="eyebrow">TabHarbor Dashboard</p>
+          <h1 id="dashboard-hero-title">Manage sessions, duplicates, and browsing clutter</h1>
+          <p id="dashboard-hero-meta" class="subtle">Built with least-privilege permissions, local-only storage, and reversible actions.</p>
         </div>
         <div class="hero-actions">
           <button id="archive-selected-button" class="primary">Archive Selected</button>
@@ -30,31 +30,39 @@
           autocomplete="off"
           placeholder="Search tabs, domains, or sessions…"
         />
-        <label class="toolbar-field">
-          Group by
+        <label id="dashboard-group-field" class="toolbar-field">
+          <span class="field-label">Group by</span>
           <select id="group-by-select">
             <option value="none">None</option>
             <option value="window">Window</option>
             <option value="domain">Domain</option>
           </select>
         </label>
-        <label class="toolbar-field">
-          Sort by
+        <label id="dashboard-sort-field" class="toolbar-field">
+          <span class="field-label">Sort by</span>
           <select id="sort-by-select">
             <option value="recent">Recent</option>
             <option value="title">Title</option>
             <option value="domain">Root Domain</option>
           </select>
         </label>
-        <label class="toolbar-field">
-          Stale after
+        <label id="dashboard-stale-field" class="toolbar-field">
+          <span class="field-label">Stale after</span>
           <select id="stale-threshold-select">
             <option value="3">3 days</option>
             <option value="7">7 days</option>
             <option value="14">14 days</option>
           </select>
         </label>
-        <label class="toolbar-check">
+        <label id="dashboard-language-field" class="toolbar-field">
+          <span class="field-label">Language</span>
+          <select id="locale-select">
+            <option value="auto">Auto (Browser)</option>
+            <option value="zh-CN">简体中文</option>
+            <option value="en">English</option>
+          </select>
+        </label>
+        <label id="dashboard-sound-field" class="toolbar-check">
           <input id="sound-enabled-checkbox" type="checkbox" />
           <span>Button sound</span>
         </label>
@@ -62,7 +70,7 @@
 
       <section class="content-grid">
         <aside class="panel filters-panel">
-          <h2>Focus</h2>
+          <h2 id="dashboard-focus-title">Focus</h2>
           <div class="stack" id="filter-list">
             <button data-filter="all" class="filter-button active">All Tabs</button>
             <button data-filter="current-window" class="filter-button">Current Window</button>
@@ -72,7 +80,7 @@
           </div>
 
           <div class="panel inset">
-            <h3>Snapshot</h3>
+            <h3 id="dashboard-snapshot-title">Snapshot</h3>
             <div class="summary-stack" id="summary-list"></div>
           </div>
         </aside>
@@ -86,6 +94,11 @@
           <div id="sessions-panel" class="stack"></div>
         </section>
       </section>
+
+      <footer class="app-footer">
+        <a id="dashboard-contact-link" class="footer-link" href="mailto:pokocat@163.com" target="_blank" rel="noreferrer">Contact Author</a>
+        <a id="dashboard-issues-link" class="footer-link" href="https://github.com/pokocat/Tab-Harbor/issues" target="_blank" rel="noreferrer">GitHub Issues</a>
+      </footer>
     </main>
 
     <script type="module" src="dashboard.js"></script>
