@@ -1,5 +1,11 @@
 import { TRACKING_QUERY_PREFIXES } from "./constants.js";
 
+export interface NormalizeUrlOptions {
+  ignoreHash?: boolean;
+  ignoreSearch?: boolean;
+  stripTrackingQueryParams?: boolean;
+}
+
 function canParse(url: string): boolean {
   return /^https?:\/\//.test(url);
 }
@@ -60,18 +66,27 @@ export function getRootDomainLabel(url: string): string {
   }
 }
 
-export function normalizeUrl(url: string): string {
+export function normalizeUrl(url: string, options: NormalizeUrlOptions = {}): string {
   if (!canParse(url)) {
     return url;
   }
 
   try {
     const parsed = new URL(url);
-    parsed.hash = "";
+    const { ignoreHash = true, ignoreSearch = false, stripTrackingQueryParams = true } = options;
+
+    if (ignoreHash) {
+      parsed.hash = "";
+    }
+
+    if (ignoreSearch) {
+      parsed.search = "";
+      return parsed.toString();
+    }
 
     const paramsToDelete: string[] = [];
     parsed.searchParams.forEach((_value, key) => {
-      if (TRACKING_QUERY_PREFIXES.some((prefix) => key.startsWith(prefix))) {
+      if (stripTrackingQueryParams && TRACKING_QUERY_PREFIXES.some((prefix) => key.startsWith(prefix))) {
         paramsToDelete.push(key);
       }
     });

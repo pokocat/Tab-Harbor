@@ -68,7 +68,18 @@
         </label>
       </section>
 
-      <section class="content-grid">
+      <section class="panel view-switcher-panel">
+        <div id="dashboard-view-switcher" class="view-switcher" role="tablist" aria-label="Dashboard sections">
+          <button id="dashboard-view-tabs-button" type="button" class="view-tab active" data-dashboard-view="tabs" role="tab" aria-selected="true">
+            标签管理
+          </button>
+          <button id="dashboard-view-dedupe-button" type="button" class="view-tab" data-dashboard-view="dedupe" role="tab" aria-selected="false">
+            防重复配置
+          </button>
+        </div>
+      </section>
+
+      <section id="dashboard-tabs-view" class="content-grid dashboard-view-panel">
         <aside class="panel filters-panel">
           <h2 id="dashboard-focus-title">Focus</h2>
           <div class="stack" id="filter-list">
@@ -93,6 +104,135 @@
           <div id="tab-groups" class="stack"></div>
           <div id="sessions-panel" class="stack"></div>
         </section>
+      </section>
+
+      <section id="dashboard-dedupe-view" class="panel dashboard-view-panel dedupe-main-panel" hidden>
+        <div class="dedupe-main-header">
+          <div>
+            <p id="dashboard-dedupe-eyebrow" class="eyebrow">Duplicate Prevention</p>
+            <h2 id="dashboard-dedupe-title">Duplicate Prevention</h2>
+            <p id="dashboard-dedupe-meta" class="subtle">Control when duplicate tabs are blocked and which pages should be ignored.</p>
+          </div>
+          <div class="dedupe-main-actions">
+            <label id="dashboard-dedupe-enabled-field" class="toolbar-check">
+              <input id="dedupe-enabled-checkbox" type="checkbox" />
+              <span>Enabled</span>
+            </label>
+            <button id="dedupe-save-button" type="button" class="action-button focus-button">Save Rules</button>
+            <button id="dedupe-run-now-button" type="button" class="action-button danger">Run Now</button>
+          </div>
+        </div>
+
+        <div class="dedupe-main-grid">
+          <section class="dedupe-card">
+            <h3 id="dashboard-dedupe-rules-title">Matching Rules</h3>
+            <div class="dedupe-config-grid">
+              <label id="dashboard-dedupe-only-http-field" class="dedupe-option">
+                <span class="dedupe-option-main">
+                  <input id="dedupe-only-http-checkbox" type="checkbox" />
+                  <span>HTTP only</span>
+                </span>
+                <p id="dashboard-dedupe-only-http-desc" class="dedupe-option-desc">Only compare normal web pages and ignore browser-internal pages.</p>
+              </label>
+              <label id="dashboard-dedupe-same-window-field" class="dedupe-option">
+                <span class="dedupe-option-main">
+                  <input id="dedupe-same-window-checkbox" type="checkbox" />
+                  <span>Same window only</span>
+                </span>
+                <p id="dashboard-dedupe-same-window-desc" class="dedupe-option-desc">Only treat tabs in the same browser window as duplicates.</p>
+              </label>
+              <label id="dashboard-dedupe-ignore-search-field" class="dedupe-option">
+                <span class="dedupe-option-main">
+                  <input id="dedupe-ignore-search-checkbox" type="checkbox" />
+                  <span>Ignore query params</span>
+                </span>
+                <p id="dashboard-dedupe-ignore-search-desc" class="dedupe-option-desc">Treat URLs with different query strings as the same page.</p>
+              </label>
+              <label id="dashboard-dedupe-ignore-hash-field" class="dedupe-option">
+                <span class="dedupe-option-main">
+                  <input id="dedupe-ignore-hash-checkbox" type="checkbox" />
+                  <span>Ignore hash</span>
+                </span>
+                <p id="dashboard-dedupe-ignore-hash-desc" class="dedupe-option-desc">Ignore the part after # when matching duplicate pages.</p>
+              </label>
+            </div>
+          </section>
+
+          <section class="dedupe-card">
+            <h3 id="dashboard-dedupe-strategy-title">Conflict Strategy</h3>
+            <div class="dedupe-config-grid">
+              <label id="dashboard-dedupe-close-old-field" class="dedupe-option">
+                <span class="dedupe-option-main">
+                  <input id="dedupe-close-old-checkbox" type="checkbox" />
+                  <span>Close old tab</span>
+                </span>
+                <p id="dashboard-dedupe-close-old-desc" class="dedupe-option-desc">When a duplicate is found, keep the newer tab instead of the older one.</p>
+              </label>
+              <label id="dashboard-dedupe-keep-active-field" class="dedupe-option">
+                <span class="dedupe-option-main">
+                  <input id="dedupe-keep-active-checkbox" type="checkbox" />
+                  <span>Keep active tab</span>
+                </span>
+                <p id="dashboard-dedupe-keep-active-desc" class="dedupe-option-desc">If one of the duplicate tabs is active, prefer keeping that tab open.</p>
+              </label>
+            </div>
+          </section>
+
+          <section class="dedupe-card">
+            <h3 id="dashboard-dedupe-triggers-title">When To Check</h3>
+            <div class="dedupe-config-grid">
+              <label id="dashboard-dedupe-on-create-field" class="dedupe-option">
+                <span class="dedupe-option-main">
+                  <input id="dedupe-on-create-checkbox" type="checkbox" />
+                  <span>On create</span>
+                </span>
+                <p id="dashboard-dedupe-on-create-desc" class="dedupe-option-desc">Check immediately when a new tab is opened.</p>
+              </label>
+              <label id="dashboard-dedupe-on-update-field" class="dedupe-option">
+                <span class="dedupe-option-main">
+                  <input id="dedupe-on-update-checkbox" type="checkbox" />
+                  <span>On update</span>
+                </span>
+                <p id="dashboard-dedupe-on-update-desc" class="dedupe-option-desc">Re-check when a tab finishes loading or its URL changes.</p>
+              </label>
+              <label id="dashboard-dedupe-on-activate-field" class="dedupe-option">
+                <span class="dedupe-option-main">
+                  <input id="dedupe-on-activate-checkbox" type="checkbox" />
+                  <span>On activate</span>
+                </span>
+                <p id="dashboard-dedupe-on-activate-desc" class="dedupe-option-desc">Check again when you switch to a tab.</p>
+              </label>
+            </div>
+          </section>
+
+          <section class="dedupe-card dedupe-card-wide">
+            <h3 id="dashboard-dedupe-ignore-title">Ignore List</h3>
+            <div class="dedupe-form-grid">
+              <label id="dashboard-dedupe-ignore-domains-field" class="dedupe-textarea-field">
+                <span class="field-label">Ignored domains</span>
+                <p id="dashboard-dedupe-ignore-domains-desc" class="dedupe-option-desc">Domains in this list are skipped entirely, including all matching subdomains.</p>
+                <textarea
+                  id="dedupe-ignore-domains-input"
+                  rows="6"
+                  spellcheck="false"
+                  placeholder="chrome.google.com&#10;mail.google.com"
+                ></textarea>
+              </label>
+
+              <label id="dashboard-dedupe-ignore-urls-field" class="dedupe-textarea-field">
+                <span class="field-label">Ignored URLs</span>
+                <p id="dashboard-dedupe-ignore-urls-desc" class="dedupe-option-desc">Use this for exact pages you never want duplicate prevention to close.</p>
+                <textarea
+                  id="dedupe-ignore-urls-input"
+                  rows="6"
+                  spellcheck="false"
+                  placeholder="https://example.com/docs"
+                ></textarea>
+              </label>
+            </div>
+            <p id="dashboard-dedupe-help" class="subtle dedupe-help">Enter one domain or URL per line. These rules are applied immediately after saving.</p>
+          </section>
+        </div>
       </section>
 
       <footer class="app-footer">

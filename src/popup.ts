@@ -17,6 +17,7 @@ const quickSearchInput = mustInput("quick-search-input");
 const currentWindowSearchInput = mustInput("current-window-search-input");
 const quickSearchResults = mustElement("quick-search-results");
 const soundEnabledToggle = mustInput("sound-enabled-toggle");
+const duplicatePreventionToggle = mustInput("duplicate-prevention-toggle");
 const heroQuote = mustElement("hero-quote");
 const currentWindowMeta = mustElement("current-window-meta");
 const popupGroupSelect = mustElement("popup-group-select");
@@ -37,7 +38,7 @@ async function initialize() {
   state = await getState();
   i18n = createI18n(state.preferences.locale);
   applyStaticCopy();
-  soundEnabledToggle.checked = state.preferences.soundEnabled;
+  syncToggleStates(state);
   setRadioGroupValue(popupGroupSelect, popupGroupMode);
   setRadioGroupValue(popupSortSelect, popupSortMode);
   heroQuote.textContent = pickHeroQuote();
@@ -49,6 +50,7 @@ function bindEvents() {
   quickSearchInput.addEventListener("input", () => state && renderQuickSearch(state));
   currentWindowSearchInput.addEventListener("input", () => state && renderCurrentWindow(state.tabs));
   soundEnabledToggle.addEventListener("change", () => void updateSoundPreference());
+  duplicatePreventionToggle.addEventListener("change", () => void updateDuplicatePreventionPreference());
   popupGroupSelect.addEventListener("change", () => {
     popupGroupMode = getRadioGroupValue(popupGroupSelect) as PopupGroupMode;
     if (state) {
@@ -345,7 +347,7 @@ async function archiveCurrentWindow() {
     state = response.state;
     i18n = createI18n(state.preferences.locale);
     applyStaticCopy();
-    soundEnabledToggle.checked = state.preferences.soundEnabled;
+    syncToggleStates(state);
     render(state);
   }
 }
@@ -380,7 +382,7 @@ async function closeCluster(cluster: DuplicateCluster) {
     state = response.state;
     i18n = createI18n(state.preferences.locale);
     applyStaticCopy();
-    soundEnabledToggle.checked = state.preferences.soundEnabled;
+    syncToggleStates(state);
     render(state);
   }
 }
@@ -392,7 +394,7 @@ async function restoreSession(sessionId: string, target: "new-window" | "current
     state = response.state;
     i18n = createI18n(state.preferences.locale);
     applyStaticCopy();
-    soundEnabledToggle.checked = state.preferences.soundEnabled;
+    syncToggleStates(state);
     render(state);
   }
 }
@@ -409,7 +411,7 @@ async function closeSingleTab(tabId: number) {
     state = response.state;
     i18n = createI18n(state.preferences.locale);
     applyStaticCopy();
-    soundEnabledToggle.checked = state.preferences.soundEnabled;
+    syncToggleStates(state);
     render(state);
   }
 }
@@ -434,7 +436,22 @@ async function updateSoundPreference() {
     state = response.state;
     i18n = createI18n(state.preferences.locale);
     applyStaticCopy();
-    soundEnabledToggle.checked = state.preferences.soundEnabled;
+    syncToggleStates(state);
+    await playUiSound(state.preferences, "focus");
+    render(state);
+  }
+}
+
+async function updateDuplicatePreventionPreference() {
+  const response = await sendMessage({
+    type: "UPDATE_DUPLICATE_PREVENTION_CONFIG",
+    payload: { enabled: duplicatePreventionToggle.checked }
+  });
+  if (response.ok && response.state) {
+    state = response.state;
+    i18n = createI18n(state.preferences.locale);
+    applyStaticCopy();
+    syncToggleStates(state);
     await playUiSound(state.preferences, "focus");
     render(state);
   }
@@ -549,6 +566,11 @@ function pickHeroQuote(): string {
   return i18n.t(quotes[index] ?? quotes[0]);
 }
 
+function syncToggleStates(appState: AppState) {
+  soundEnabledToggle.checked = appState.preferences.soundEnabled;
+  duplicatePreventionToggle.checked = appState.duplicatePreventionConfig.enabled;
+}
+
 function applyStaticCopy() {
   document.title = i18n.t("popup.title");
   document.documentElement.lang = i18n.locale;
@@ -556,6 +578,9 @@ function applyStaticCopy() {
   setText("popup-quick-actions-title", i18n.t("popup.section.quickActions"));
   setText("popup-sound-label", i18n.t("popup.sound.label"));
   mustElement("popup-sound-switch").setAttribute("aria-label", i18n.t("popup.sound.aria"));
+  setText("popup-dedup-prevention-label", i18n.t("popup.dedupPrevention.label"));
+  setText("popup-dedup-prevention-meta", i18n.t("popup.dedupPrevention.meta"));
+  mustElement("popup-dedup-prevention-switch").setAttribute("aria-label", i18n.t("popup.dedupPrevention.aria"));
   setText("popup-action-archive-label", i18n.t("popup.action.archive"));
   setText("popup-action-dedup-label", i18n.t("popup.action.dedup"));
   setText("popup-action-manage-label", i18n.t("popup.action.manage"));

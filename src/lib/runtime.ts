@@ -1,5 +1,5 @@
 import type { AppState } from "./types.js";
-import type { LocalePreference } from "./types.js";
+import type { LocalePreference, UpdateDuplicatePreventionPayload } from "./types.js";
 
 type RequestMessage =
   | { type: "GET_APP_STATE" }
@@ -10,6 +10,8 @@ type RequestMessage =
   | { type: "CLOSE_DUPLICATE_CLUSTER"; payload: { duplicateKey: string; keepTabId: number } }
   | { type: "ACTIVATE_TAB"; payload: { tabId: number; windowId: number } }
   | { type: "OPEN_DASHBOARD"; payload?: { view?: "sessions" | "duplicates" | "all"; query?: string } }
+  | { type: "UPDATE_DUPLICATE_PREVENTION_CONFIG"; payload: UpdateDuplicatePreventionPayload }
+  | { type: "RUN_DUPLICATE_PREVENTION_NOW" }
   | {
       type: "UPDATE_PREFERENCES";
       payload: {

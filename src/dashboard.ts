@@ -3,11 +3,12 @@ import { createI18n, type I18nApi } from "./lib/i18n.js";
 import { getState, sendMessage } from "./lib/runtime.js";
 import { playUiSound } from "./lib/sound.js";
 import { summarizeDisplayUrl } from "./lib/url.js";
-import type { AppState, SavedSession, TabSnapshot } from "./lib/types.js";
+import type { AppState, SavedSession, TabSnapshot, UpdateDuplicatePreventionPayload } from "./lib/types.js";
 
 type FilterMode = "all" | "current-window" | "duplicates" | "stale" | "sessions";
 type GroupMode = "none" | "window" | "domain";
 type SortMode = "recent" | "title" | "domain";
+type DashboardView = "tabs" | "dedupe";
 
 const searchInput = must<HTMLInputElement>("search-input");
 const groupBySelect = must<HTMLSelectElement>("group-by-select");
@@ -24,9 +25,27 @@ const closeAllDuplicatesButton = must<HTMLButtonElement>("close-all-duplicates-b
 const closeSelectedButton = must<HTMLButtonElement>("close-selected-button");
 const soundEnabledCheckbox = must<HTMLInputElement>("sound-enabled-checkbox");
 const localeSelect = must<HTMLSelectElement>("locale-select");
+const viewSwitcher = must<HTMLElement>("dashboard-view-switcher");
+const dashboardTabsView = must<HTMLElement>("dashboard-tabs-view");
+const dashboardDedupeView = must<HTMLElement>("dashboard-dedupe-view");
+const dedupeEnabledCheckbox = must<HTMLInputElement>("dedupe-enabled-checkbox");
+const dedupeOnlyHttpCheckbox = must<HTMLInputElement>("dedupe-only-http-checkbox");
+const dedupeSameWindowCheckbox = must<HTMLInputElement>("dedupe-same-window-checkbox");
+const dedupeIgnoreSearchCheckbox = must<HTMLInputElement>("dedupe-ignore-search-checkbox");
+const dedupeIgnoreHashCheckbox = must<HTMLInputElement>("dedupe-ignore-hash-checkbox");
+const dedupeCloseOldCheckbox = must<HTMLInputElement>("dedupe-close-old-checkbox");
+const dedupeKeepActiveCheckbox = must<HTMLInputElement>("dedupe-keep-active-checkbox");
+const dedupeOnCreateCheckbox = must<HTMLInputElement>("dedupe-on-create-checkbox");
+const dedupeOnUpdateCheckbox = must<HTMLInputElement>("dedupe-on-update-checkbox");
+const dedupeOnActivateCheckbox = must<HTMLInputElement>("dedupe-on-activate-checkbox");
+const dedupeIgnoreDomainsInput = must<HTMLTextAreaElement>("dedupe-ignore-domains-input");
+const dedupeIgnoreUrlsInput = must<HTMLTextAreaElement>("dedupe-ignore-urls-input");
+const dedupeSaveButton = must<HTMLButtonElement>("dedupe-save-button");
+const dedupeRunNowButton = must<HTMLButtonElement>("dedupe-run-now-button");
 
 let state: AppState | null = null;
 let activeFilter: FilterMode = "all";
+let activeDashboardView: DashboardView = "tabs";
 const selectedTabIds = new Set<number>();
 const collapsedWindowIds = new Set<number>();
 let sortMode: SortMode = "recent";
@@ -57,6 +76,15 @@ function bindEvents() {
   archiveSelectedButton.addEventListener("click", () => void archiveSelected());
   closeAllDuplicatesButton.addEventListener("click", () => void closeAllDuplicates());
   closeSelectedButton.addEventListener("click", () => void closeSelected());
+  dedupeSaveButton.addEventListener("click", () => void handleDuplicatePreventionSave());
+  dedupeRunNowButton.addEventListener("click", () => void handleDuplicatePreventionRunNow());
+  viewSwitcher.querySelectorAll<HTMLButtonElement>("[data-dashboard-view]").forEach((button) => {
+    button.addEventListener("click", () => {
+      activeDashboardView = button.dataset.dashboardView as DashboardView;
+      setActiveDashboardView();
+      render();
+    });
+  });
 
   filterList.querySelectorAll<HTMLButtonElement>("[data-filter]").forEach((button) => {
     button.addEventListener("click", () => {
@@ -73,6 +101,18 @@ function applyPreferences(appState: AppState) {
   soundEnabledCheckbox.checked = appState.preferences.soundEnabled;
   localeSelect.value = appState.preferences.locale;
   sortBySelect.value = sortMode;
+  dedupeEnabledCheckbox.checked = appState.duplicatePreventionConfig.enabled;
+  dedupeOnlyHttpCheckbox.checked = appState.duplicatePreventionConfig.onlyHttp;
+  dedupeSameWindowCheckbox.checked = appState.duplicatePreventionConfig.sameWindowOnly;
+  dedupeIgnoreSearchCheckbox.checked = appState.duplicatePreventionConfig.ignoreSearch;
+  dedupeIgnoreHashCheckbox.checked = appState.duplicatePreventionConfig.ignoreHash;
+  dedupeCloseOldCheckbox.checked = appState.duplicatePreventionConfig.closeOldTab;
+  dedupeKeepActiveCheckbox.checked = appState.duplicatePreventionConfig.keepActiveTab;
+  dedupeOnCreateCheckbox.checked = appState.duplicatePreventionConfig.checkOnCreate;
+  dedupeOnUpdateCheckbox.checked = appState.duplicatePreventionConfig.checkOnUpdate;
+  dedupeOnActivateCheckbox.checked = appState.duplicatePreventionConfig.checkOnActivate;
+  dedupeIgnoreDomainsInput.value = appState.duplicatePreventionConfig.ignoreDomains.join("\n");
+  dedupeIgnoreUrlsInput.value = appState.duplicatePreventionConfig.ignoreUrls.join("\n");
 }
 
 function applyQueryState() {
@@ -87,6 +127,11 @@ function applyQueryState() {
   if (view === "sessions" || view === "duplicates" || view === "all") {
     activeFilter = view === "sessions" ? "sessions" : view === "duplicates" ? "duplicates" : "all";
     setActiveFilterButton();
+    activeDashboardView = "tabs";
+  }
+
+  if (view === "dedupe") {
+    activeDashboardView = "dedupe";
   }
 }
 
@@ -101,7 +146,12 @@ function render() {
     return;
   }
 
+  setActiveDashboardView();
   renderSummary(state);
+
+  if (activeDashboardView === "dedupe") {
+    return;
+  }
 
   if (activeFilter === "sessions") {
     renderSessions(state.sessions);
@@ -182,6 +232,17 @@ function render() {
     groupCard.append(list);
     tabGroups.append(groupCard);
   }
+}
+
+function setActiveDashboardView() {
+  dashboardTabsView.hidden = activeDashboardView !== "tabs";
+  dashboardDedupeView.hidden = activeDashboardView !== "dedupe";
+
+  viewSwitcher.querySelectorAll<HTMLButtonElement>("[data-dashboard-view]").forEach((button) => {
+    const isActive = button.dataset.dashboardView === activeDashboardView;
+    button.classList.toggle("active", isActive);
+    button.setAttribute("aria-selected", String(isActive));
+  });
 }
 
 function renderSummary(appState: AppState) {
@@ -432,6 +493,41 @@ async function handleLocaleChange() {
   }
 }
 
+async function handleDuplicatePreventionSave() {
+  const response = await sendMessage({
+    type: "UPDATE_DUPLICATE_PREVENTION_CONFIG",
+    payload: collectDuplicatePreventionPayload()
+  });
+  if (response.ok && response.state) {
+    state = response.state;
+    i18n = createI18n(state.preferences.locale);
+    applyPreferences(state);
+    applyStaticCopy();
+    await playUiSound(state.preferences, "focus");
+    render();
+  }
+}
+
+async function handleDuplicatePreventionRunNow() {
+  const savedResponse = await sendMessage({
+    type: "UPDATE_DUPLICATE_PREVENTION_CONFIG",
+    payload: collectDuplicatePreventionPayload()
+  });
+  if (!savedResponse.ok || !savedResponse.state) {
+    return;
+  }
+
+  const response = await sendMessage({ type: "RUN_DUPLICATE_PREVENTION_NOW" });
+  if (response.ok && response.state) {
+    state = response.state;
+    i18n = createI18n(state.preferences.locale);
+    applyPreferences(state);
+    applyStaticCopy();
+    await playUiSound(state.preferences, "close");
+    render();
+  }
+}
+
 async function archiveSelected() {
   if (selectedTabIds.size === 0) {
     return;
@@ -523,6 +619,30 @@ async function closeAllDuplicates() {
   await closeTabs(duplicateIdsToClose, "close");
 }
 
+function collectDuplicatePreventionPayload(): UpdateDuplicatePreventionPayload {
+  return {
+    enabled: dedupeEnabledCheckbox.checked,
+    onlyHttp: dedupeOnlyHttpCheckbox.checked,
+    sameWindowOnly: dedupeSameWindowCheckbox.checked,
+    ignoreSearch: dedupeIgnoreSearchCheckbox.checked,
+    ignoreHash: dedupeIgnoreHashCheckbox.checked,
+    closeOldTab: dedupeCloseOldCheckbox.checked,
+    keepActiveTab: dedupeKeepActiveCheckbox.checked,
+    checkOnCreate: dedupeOnCreateCheckbox.checked,
+    checkOnUpdate: dedupeOnUpdateCheckbox.checked,
+    checkOnActivate: dedupeOnActivateCheckbox.checked,
+    ignoreDomains: parseMultilineList(dedupeIgnoreDomainsInput.value),
+    ignoreUrls: parseMultilineList(dedupeIgnoreUrlsInput.value)
+  };
+}
+
+function parseMultilineList(value: string): string[] {
+  return value
+    .split(/\r?\n/)
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+}
+
 function getDuplicateCloseIds(tabs: TabSnapshot[]): number[] {
   const groups = new Map<string, TabSnapshot[]>();
   for (const tab of tabs) {
@@ -601,6 +721,43 @@ function applyStaticCopy() {
   setFilterText("stale", i18n.t("dashboard.filter.stale"));
   setFilterText("sessions", i18n.t("dashboard.filter.sessions"));
   setText("dashboard-snapshot-title", i18n.t("dashboard.snapshot.title"));
+  setText("dashboard-dedupe-eyebrow", i18n.t("dashboard.dedupe.title"));
+  setText("dashboard-dedupe-title", i18n.t("dashboard.dedupe.title"));
+  setText("dashboard-dedupe-meta", i18n.t("dashboard.dedupe.meta"));
+  setText("dashboard-dedupe-rules-title", i18n.t("dashboard.dedupe.rulesTitle"));
+  setText("dashboard-dedupe-strategy-title", i18n.t("dashboard.dedupe.strategyTitle"));
+  setText("dashboard-dedupe-triggers-title", i18n.t("dashboard.dedupe.triggersTitle"));
+  setText("dashboard-dedupe-ignore-title", i18n.t("dashboard.dedupe.ignoreTitle"));
+  setViewTabText("tabs", i18n.t("dashboard.view.tabs"));
+  setViewTabText("dedupe", i18n.t("dashboard.view.dedupe"));
+  setCheckLabel("dashboard-dedupe-enabled-field", i18n.t("dashboard.dedupe.enabled"));
+  setCheckLabel("dashboard-dedupe-only-http-field", i18n.t("dashboard.dedupe.onlyHttp"));
+  setText("dashboard-dedupe-only-http-desc", i18n.t("dashboard.dedupe.onlyHttpDesc"));
+  setCheckLabel("dashboard-dedupe-same-window-field", i18n.t("dashboard.dedupe.sameWindow"));
+  setText("dashboard-dedupe-same-window-desc", i18n.t("dashboard.dedupe.sameWindowDesc"));
+  setCheckLabel("dashboard-dedupe-ignore-search-field", i18n.t("dashboard.dedupe.ignoreSearch"));
+  setText("dashboard-dedupe-ignore-search-desc", i18n.t("dashboard.dedupe.ignoreSearchDesc"));
+  setCheckLabel("dashboard-dedupe-ignore-hash-field", i18n.t("dashboard.dedupe.ignoreHash"));
+  setText("dashboard-dedupe-ignore-hash-desc", i18n.t("dashboard.dedupe.ignoreHashDesc"));
+  setCheckLabel("dashboard-dedupe-close-old-field", i18n.t("dashboard.dedupe.closeOld"));
+  setText("dashboard-dedupe-close-old-desc", i18n.t("dashboard.dedupe.closeOldDesc"));
+  setCheckLabel("dashboard-dedupe-keep-active-field", i18n.t("dashboard.dedupe.keepActive"));
+  setText("dashboard-dedupe-keep-active-desc", i18n.t("dashboard.dedupe.keepActiveDesc"));
+  setCheckLabel("dashboard-dedupe-on-create-field", i18n.t("dashboard.dedupe.onCreate"));
+  setText("dashboard-dedupe-on-create-desc", i18n.t("dashboard.dedupe.onCreateDesc"));
+  setCheckLabel("dashboard-dedupe-on-update-field", i18n.t("dashboard.dedupe.onUpdate"));
+  setText("dashboard-dedupe-on-update-desc", i18n.t("dashboard.dedupe.onUpdateDesc"));
+  setCheckLabel("dashboard-dedupe-on-activate-field", i18n.t("dashboard.dedupe.onActivate"));
+  setText("dashboard-dedupe-on-activate-desc", i18n.t("dashboard.dedupe.onActivateDesc"));
+  setToolbarField("dashboard-dedupe-ignore-domains-field", i18n.t("dashboard.dedupe.ignoreDomains"));
+  setText("dashboard-dedupe-ignore-domains-desc", i18n.t("dashboard.dedupe.ignoreDomainsDesc"));
+  setToolbarField("dashboard-dedupe-ignore-urls-field", i18n.t("dashboard.dedupe.ignoreUrls"));
+  setText("dashboard-dedupe-ignore-urls-desc", i18n.t("dashboard.dedupe.ignoreUrlsDesc"));
+  dedupeIgnoreDomainsInput.placeholder = i18n.t("dashboard.dedupe.ignoreDomainsPlaceholder");
+  dedupeIgnoreUrlsInput.placeholder = i18n.t("dashboard.dedupe.ignoreUrlsPlaceholder");
+  setText("dashboard-dedupe-help", i18n.t("dashboard.dedupe.help"));
+  dedupeSaveButton.textContent = i18n.t("dashboard.dedupe.save");
+  dedupeRunNowButton.textContent = i18n.t("dashboard.dedupe.runNow");
   setText("dashboard-contact-link", i18n.t("dashboard.footer.contact"));
   setText("dashboard-issues-link", i18n.t("dashboard.footer.issues"));
 }
@@ -620,6 +777,10 @@ function setCheckLabel(id: string, label: string) {
 
 function setFilterText(filter: FilterMode, value: string) {
   filterList.querySelector<HTMLButtonElement>(`[data-filter="${filter}"]`)!.textContent = value;
+}
+
+function setViewTabText(view: DashboardView, value: string) {
+  viewSwitcher.querySelector<HTMLButtonElement>(`[data-dashboard-view="${view}"]`)!.textContent = value;
 }
 
 function setOptionText(select: HTMLSelectElement, value: string, label: string) {

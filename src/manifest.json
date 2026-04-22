@@ -24,5 +24,11 @@
     },
     "default_popup": "popup.html"
   },
+  "web_accessible_resources": [
+    {
+      "resources": ["icons/*", "img/*", "img/*.svg"],
+      "matches": ["<all_urls>"]
+    }
+  ],
   "options_page": "dashboard.html"
 }

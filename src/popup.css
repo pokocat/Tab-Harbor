@@ -135,11 +135,26 @@ input {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
   margin-bottom: 5px;
 }
 
 .section-header h2 {
   font-size: 13px;
+}
+
+.header-switches {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.card-meta {
+  margin: 6px 2px 0;
+  color: var(--muted);
+  font-size: 10px;
 }
 
 .section-meta {

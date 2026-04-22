@@ -1,5 +1,6 @@
 export type GroupByMode = "window" | "domain";
 export type LocalePreference = "auto" | "en" | "zh-CN";
+export type DuplicatePreventionTrigger = "create" | "update" | "activate";
 
 export interface StoredTabReference {
   title: string;
@@ -23,6 +24,21 @@ export interface UserPreference {
   showDuplicateHints: boolean;
   soundEnabled: boolean;
   locale: LocalePreference;
+}
+
+export interface DuplicatePreventionConfig {
+  enabled: boolean;
+  onlyHttp: boolean;
+  ignoreSearch: boolean;
+  ignoreHash: boolean;
+  sameWindowOnly: boolean;
+  closeOldTab: boolean;
+  keepActiveTab: boolean;
+  checkOnCreate: boolean;
+  checkOnUpdate: boolean;
+  checkOnActivate: boolean;
+  ignoreDomains: string[];
+  ignoreUrls: string[];
 }
 
 export interface TabSnapshot {
@@ -63,6 +79,7 @@ export interface AppState {
   duplicateClusters: DuplicateCluster[];
   sessions: SavedSession[];
   preferences: UserPreference;
+  duplicatePreventionConfig: DuplicatePreventionConfig;
   summary: TabSummary;
 }
 
@@ -87,4 +104,19 @@ export interface UpdatePreferencesPayload {
   showDuplicateHints?: boolean;
   soundEnabled?: boolean;
   locale?: LocalePreference;
+}
+
+export interface UpdateDuplicatePreventionPayload {
+  enabled?: boolean;
+  onlyHttp?: boolean;
+  ignoreSearch?: boolean;
+  ignoreHash?: boolean;
+  sameWindowOnly?: boolean;
+  closeOldTab?: boolean;
+  keepActiveTab?: boolean;
+  checkOnCreate?: boolean;
+  checkOnUpdate?: boolean;
+  checkOnActivate?: boolean;
+  ignoreDomains?: string[];
+  ignoreUrls?: string[];
 }

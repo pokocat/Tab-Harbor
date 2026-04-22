@@ -1,13 +1,22 @@
 import type {
   AppState,
+  DuplicatePreventionConfig,
   DuplicateCluster,
   SavedSession,
   StoredTabReference,
   TabSnapshot,
+  UpdateDuplicatePreventionPayload,
   UpdatePreferencesPayload
 } from "./types.js";
 import { isEmptyPage, getDomainLabel, getRootDomainLabel, normalizeUrl } from "./url.js";
-import { loadPreferences, loadSessions, savePreferences, saveSessions } from "./storage.js";
+import {
+  loadDuplicatePreventionConfig,
+  loadPreferences,
+  loadSessions,
+  saveDuplicatePreventionConfig,
+  savePreferences,
+  saveSessions
+} from "./storage.js";
 
 function toSnapshot(tab: chrome.tabs.Tab, staleThresholdMs: number): TabSnapshot | null {
   if (!tab.id || !tab.windowId || !tab.url) {
@@ -74,10 +83,11 @@ function summarize(
 }
 
 export async function getAppState(): Promise<AppState> {
-  const [allTabs, sessions, preferences] = await Promise.all([
+  const [allTabs, sessions, preferences, duplicatePreventionConfig] = await Promise.all([
     chrome.tabs.query({}),
     loadSessions(),
-    loadPreferences()
+    loadPreferences(),
+    loadDuplicatePreventionConfig()
   ]);
 
   const staleThresholdMs = preferences.staleThresholdDays * 24 * 60 * 60 * 1000;
@@ -99,6 +109,7 @@ export async function getAppState(): Promise<AppState> {
     duplicateClusters,
     sessions: sessions.sort((left, right) => right.updatedAt - left.updatedAt),
     preferences,
+    duplicatePreventionConfig,
     summary: summarize(tabs, duplicateClusters, sessions)
   };
 }
@@ -225,4 +236,49 @@ export async function updatePreferences(payload: UpdatePreferencesPayload) {
   };
   await savePreferences(nextPreferences);
   return nextPreferences;
+}
+
+export async function getDuplicatePreventionConfig(): Promise<DuplicatePreventionConfig> {
+  return loadDuplicatePreventionConfig();
+}
+
+export async function updateDuplicatePreventionConfig(payload: UpdateDuplicatePreventionPayload) {
+  const config = await loadDuplicatePreventionConfig();
+  const nextConfig: DuplicatePreventionConfig = {
+    ...config,
+    ...payload,
+    ignoreDomains: payload.ignoreDomains ? sanitizeStringList(payload.ignoreDomains) : config.ignoreDomains,
+    ignoreUrls: payload.ignoreUrls ? sanitizeStringList(payload.ignoreUrls) : config.ignoreUrls
+  };
+  await saveDuplicatePreventionConfig(nextConfig);
+  return nextConfig;
+}
+
+export async function resetDuplicatePreventionConfig(): Promise<DuplicatePreventionConfig> {
+  const resetConfig: DuplicatePreventionConfig = {
+    enabled: false,
+    onlyHttp: true,
+    ignoreSearch: true,
+    ignoreHash: true,
+    sameWindowOnly: true,
+    closeOldTab: true,
+    keepActiveTab: true,
+    checkOnCreate: true,
+    checkOnUpdate: true,
+    checkOnActivate: true,
+    ignoreDomains: [],
+    ignoreUrls: []
+  };
+  await saveDuplicatePreventionConfig(resetConfig);
+  return resetConfig;
+}
+
+function sanitizeStringList(values: string[]): string[] {
+  return Array.from(
+    new Set(
+      values
+        .map((value) => value.trim())
+        .filter(Boolean)
+    )
+  );
 }

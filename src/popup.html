@@ -18,13 +18,22 @@
       <section class="card compact-card">
         <div class="section-header">
           <h2 id="popup-quick-actions-title">Quick Actions</h2>
-          <label id="popup-sound-switch" class="switch" aria-label="Toggle sound feedback">
-            <input id="sound-enabled-toggle" type="checkbox" />
-            <span class="switch-track">
-              <span class="switch-thumb"></span>
-            </span>
-            <span id="popup-sound-label" class="switch-label">Sound</span>
-          </label>
+          <div class="header-switches">
+            <label id="popup-dedup-prevention-switch" class="switch" aria-label="Toggle duplicate prevention">
+              <input id="duplicate-prevention-toggle" type="checkbox" />
+              <span class="switch-track">
+                <span class="switch-thumb"></span>
+              </span>
+              <span id="popup-dedup-prevention-label" class="switch-label">Prevent Duplicates</span>
+            </label>
+            <label id="popup-sound-switch" class="switch" aria-label="Toggle sound feedback">
+              <input id="sound-enabled-toggle" type="checkbox" />
+              <span class="switch-track">
+                <span class="switch-thumb"></span>
+              </span>
+              <span id="popup-sound-label" class="switch-label">Sound</span>
+            </label>
+          </div>
         </div>
         <div class="action-grid quick-action-grid">
           <button id="archive-window-button" class="primary action-accent">
@@ -57,6 +66,7 @@
             <span id="popup-action-manage-label">Manage</span>
           </button>
         </div>
+        <p id="popup-dedup-prevention-meta" class="card-meta">Detailed rules can be configured from the extension background console.</p>
       </section>
 
       <section class="card">

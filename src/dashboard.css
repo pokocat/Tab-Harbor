@@ -29,7 +29,8 @@ body {
 
 button,
 input,
-select {
+select,
+textarea {
   font: inherit;
 }
 
@@ -190,6 +191,34 @@ button:active {
   gap: 10px;
 }
 
+.dashboard-view-panel[hidden] {
+  display: none !important;
+}
+
+.view-switcher-panel {
+  padding: 8px 10px;
+}
+
+.view-switcher {
+  display: inline-flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.view-tab {
+  min-width: 132px;
+  border-radius: 999px;
+  padding: 9px 14px;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.view-tab.active {
+  border-color: rgba(188, 94, 40, 0.24);
+  background: linear-gradient(135deg, rgba(188, 94, 40, 0.14), rgba(229, 158, 98, 0.08));
+  color: var(--accent);
+}
+
 .panel {
   padding: 12px;
 }
@@ -226,6 +255,105 @@ button:active {
   display: grid;
   gap: 6px;
   margin-top: 10px;
+}
+
+.dedupe-config-grid {
+  display: grid;
+  gap: 6px;
+}
+
+.dedupe-option {
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.5);
+  color: var(--muted);
+}
+
+.dedupe-option-main {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  color: var(--text);
+  font-weight: 600;
+}
+
+.dedupe-option-desc {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--muted);
+}
+
+.dedupe-main-panel {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+}
+
+.dedupe-main-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.dedupe-main-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.dedupe-main-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.dedupe-card {
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.7);
+  padding: 14px;
+  display: grid;
+  gap: 10px;
+}
+
+.dedupe-card-wide {
+  grid-column: 1 / -1;
+}
+
+.dedupe-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.dedupe-textarea-field {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+}
+
+.dedupe-textarea-field textarea {
+  width: 100%;
+  min-height: 68px;
+  resize: vertical;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 8px 10px;
+  background: var(--surface-strong);
+  color: var(--text);
+  font: inherit;
+}
+
+.dedupe-help {
+  margin: 0;
+  font-size: 11px;
 }
 
 .summary-row {
@@ -446,6 +574,17 @@ button:active {
 
   .toolbar {
     position: static;
+  }
+
+  .dedupe-main-header,
+  .dedupe-main-grid,
+  .dedupe-form-grid {
+    grid-template-columns: 1fr;
+    display: grid;
+  }
+
+  .dedupe-main-actions {
+    justify-content: flex-start;
   }
 
   .tab-card {

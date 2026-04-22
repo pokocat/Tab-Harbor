@@ -1,8 +1,9 @@
-import type { UserPreference } from "./types.js";
+import type { DuplicatePreventionConfig, UserPreference } from "./types.js";
 
 export const STORAGE_KEYS = {
   sessions: "savedSessions",
-  preferences: "userPreferences"
+  preferences: "userPreferences",
+  duplicatePreventionConfig: "duplicatePreventionConfig"
 } as const;
 
 export const DEFAULT_PREFERENCES: UserPreference = {
@@ -11,6 +12,21 @@ export const DEFAULT_PREFERENCES: UserPreference = {
   showDuplicateHints: true,
   soundEnabled: true,
   locale: "auto"
+};
+
+export const DEFAULT_DUPLICATE_PREVENTION_CONFIG: DuplicatePreventionConfig = {
+  enabled: false,
+  onlyHttp: true,
+  ignoreSearch: true,
+  ignoreHash: true,
+  sameWindowOnly: true,
+  closeOldTab: true,
+  keepActiveTab: true,
+  checkOnCreate: true,
+  checkOnUpdate: true,
+  checkOnActivate: true,
+  ignoreDomains: [],
+  ignoreUrls: []
 };
 
 export const TRACKING_QUERY_PREFIXES = ["utm_", "fbclid", "gclid", "mc_cid", "mc_eid"];
